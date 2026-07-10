@@ -1,0 +1,23 @@
+# Large model files - never commit
+models/
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+
+# Runtime files
+logs/
+*.log
+*.pid
+llama-server.pid
+
+# macOS/editor noise
+.DS_Store
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.bak
