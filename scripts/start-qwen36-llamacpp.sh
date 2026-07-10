@@ -13,7 +13,7 @@ PORT="${PORT:-8081}"
 
 # Loading profiles. On 16 GB Apple Silicon, large Metal allocations can starve
 # WindowServer and cause display flicker. The default profile uses full context
-# with CPU/RAM execution and quantized KV cache for stability.
+# with minimal Metal op offload plus quantized KV cache for stability/perf.
 PROFILE="${PROFILE:-auto}"
 TOTAL_MEM_GB=$(( ( $(sysctl -n hw.memsize) + 1073741823 ) / 1073741824 ))
 if [[ "$PROFILE" == "auto" ]]; then
@@ -30,9 +30,9 @@ case "$PROFILE" in
     DEFAULT_THREADS=8
     DEFAULT_BATCH_SIZE=2048
     DEFAULT_UBATCH_SIZE=2048
-    DEFAULT_N_GPU_LAYERS=0
+    DEFAULT_N_GPU_LAYERS=1
     DEFAULT_KV_OFFLOAD=0
-    DEFAULT_OP_OFFLOAD=0
+    DEFAULT_OP_OFFLOAD=1
     DEFAULT_FLASH_ATTN=on
     ;;
   safe16)
@@ -97,6 +97,11 @@ N_GPU_LAYERS="${N_GPU_LAYERS:-$DEFAULT_N_GPU_LAYERS}"
 KV_OFFLOAD="${KV_OFFLOAD:-$DEFAULT_KV_OFFLOAD}"
 OP_OFFLOAD="${OP_OFFLOAD:-$DEFAULT_OP_OFFLOAD}"
 FLASH_ATTN="${FLASH_ATTN:-$DEFAULT_FLASH_ATTN}"
+# Prompt/KV reuse cache. CACHE_RAM=-1 means no RAM limit, i.e. cache as much as llama-server can.
+CACHE_PROMPT="${CACHE_PROMPT:-1}"
+CACHE_RAM="${CACHE_RAM:--1}"
+CACHE_REUSE="${CACHE_REUSE:-1}"
+CACHE_IDLE_SLOTS="${CACHE_IDLE_SLOTS:-1}"
 ENABLE_MTP="${ENABLE_MTP:-0}"
 DRAFT_N_MAX="${DRAFT_N_MAX:-2}"
 DRAFT_N_MIN="${DRAFT_N_MIN:-1}"
@@ -163,7 +168,21 @@ CMD=(
   --no-warmup
   --metrics
   --slots
+  --cache-ram "$CACHE_RAM"
+  --cache-reuse "$CACHE_REUSE"
 )
+
+if [[ "$CACHE_PROMPT" == "1" ]]; then
+  CMD+=(--cache-prompt)
+else
+  CMD+=(--no-cache-prompt)
+fi
+
+if [[ "$CACHE_IDLE_SLOTS" == "1" ]]; then
+  CMD+=(--cache-idle-slots)
+else
+  CMD+=(--no-cache-idle-slots)
+fi
 
 if [[ "$KV_OFFLOAD" == "1" ]]; then
   CMD+=(--kv-offload)
@@ -188,7 +207,7 @@ fi
 {
   echo "Starting llama-server:"
   echo "  profile=$PROFILE total_mem_gb=$TOTAL_MEM_GB nice=$NICE_LEVEL"
-  echo "  ctx=$CTX_SIZE batch=$BATCH_SIZE ubatch=$UBATCH_SIZE ngl=$N_GPU_LAYERS kv_offload=$KV_OFFLOAD op_offload=$OP_OFFLOAD flash_attn=$FLASH_ATTN cache=$CACHE_TYPE_K/$CACHE_TYPE_V"
+  echo "  ctx=$CTX_SIZE batch=$BATCH_SIZE ubatch=$UBATCH_SIZE ngl=$N_GPU_LAYERS kv_offload=$KV_OFFLOAD op_offload=$OP_OFFLOAD flash_attn=$FLASH_ATTN cache=$CACHE_TYPE_K/$CACHE_TYPE_V prompt_cache=$CACHE_PROMPT cache_ram=$CACHE_RAM cache_reuse=$CACHE_REUSE cache_idle_slots=$CACHE_IDLE_SLOTS"
   printf '  %q' "${CMD[@]}"
   printf '\n\n'
 } > "$LOG_FILE"
