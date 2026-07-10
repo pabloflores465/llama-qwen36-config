@@ -27,6 +27,7 @@ fi
 case "$PROFILE" in
   fullctx16)
     DEFAULT_CTX_SIZE=262144
+    DEFAULT_THREADS=8
     DEFAULT_BATCH_SIZE=2048
     DEFAULT_UBATCH_SIZE=2048
     DEFAULT_N_GPU_LAYERS=0
@@ -85,8 +86,9 @@ case "$PROFILE" in
     ;;
 esac
 
+DEFAULT_THREADS="${DEFAULT_THREADS:-$(sysctl -n hw.perflevel0.physicalcpu 2>/dev/null || sysctl -n hw.ncpu)}"
 CTX_SIZE="${CTX_SIZE:-$DEFAULT_CTX_SIZE}"
-THREADS="${THREADS:-$(sysctl -n hw.perflevel0.physicalcpu 2>/dev/null || sysctl -n hw.ncpu)}"
+THREADS="${THREADS:-$DEFAULT_THREADS}"
 BATCH_SIZE="${BATCH_SIZE:-$DEFAULT_BATCH_SIZE}"
 UBATCH_SIZE="${UBATCH_SIZE:-$DEFAULT_UBATCH_SIZE}"
 CACHE_TYPE_K="${CACHE_TYPE_K:-q4_0}"
