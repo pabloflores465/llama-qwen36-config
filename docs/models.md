@@ -1,30 +1,53 @@
-# Supported models
+# Choosing a model
 
-All defaults target Apple Silicon with 16 GB unified memory, one request slot
-and the canonical port `8081`. Paths are relative to `models/`.
+All profiles are local, single-server, multimodal llama.cpp configurations for
+the same MacBook Pro M5/16 GB baseline. They use port `8081` by default, so
+switching model means stopping the current process and starting another one.
+This is intentional: unified memory is the limiting resource, and keeping two
+large multimodal models resident would make the machine unreliable.
 
-| Key | Default port | Quantization | Vision | Speculation | Notes |
-|---|---:|---|---|---|---|
-| `gemma4-12b` | 8081 | QAT Q4_0 | BF16 mmproj | external Q8 MTP | Default model and canonical Pi endpoint |
-| `gemma4-e4b` | 8081 | QAT Q4_0 | BF16 mmproj | external Q8 MTP | Smaller Gemma variant |
-| `qwen35-4b` | 8081 | UD Q4_K_XL | BF16 mmproj | built-in MTP/ngram | Fastest Qwen profile |
-| `qwen35-9b` | 8081 | UD Q4_K_XL | BF16 mmproj | built-in MTP/ngram | Higher quality, more memory |
-| `qwen36-35b` | 8081 | UD IQ2_M | BF16 mmproj | built-in MTP | MoE; CPU experts; MTP off by default |
+| Profile | Use it when | Main tradeoff | Default speculation | Full profile |
+|---|---|---|---|---|
+| Gemma 4 12B | You want the default balanced Gemma profile | Larger model and projector consume meaningful memory | External MTP | [Gemma 4 12B](model-profiles/gemma4-12b.md) |
+| Gemma 4 E4B | You want Gemma behavior with a lighter model | Less capacity than 12B | External MTP | [Gemma 4 E4B](model-profiles/gemma4-e4b.md) |
+| Qwen 3.5 4B | Interactive coding and fast iteration | Lowest Qwen capacity | MTP; n-gram available | [Qwen 3.5 4B](model-profiles/qwen35-4b.md) |
+| Qwen 3.5 9B | Better Qwen output without 35B MoE cost | More memory and slower decode than 4B | MTP; n-gram available | [Qwen 3.5 9B](model-profiles/qwen35-9b.md) |
+| Qwen 3.6 35B A3B | Maximum local model capability and MoE reasoning | Tightest 16 GB margin and CPU-MoE cost | Disabled | [Qwen 3.6 35B](model-profiles/qwen36-35b.md) |
 
-## Choosing a model
+## Selection workflow
 
-- Use Qwen 3.5 4B for latency and routine tool work.
-- Use Qwen 3.5 9B when quality is more important than latency.
-- Use Gemma 4 when its instruction style or multimodal behavior fits the task.
-- Use Qwen 3.6 35B A3B for the strongest local reasoning profile, accepting
-  slower CPU-MoE execution and tighter memory margins.
+Start with `qwen35-4b` when validating a toolchain, prompt format or vision
+request quickly. Move to `qwen35-9b` when the task benefits from a stronger
+Qwen profile. Choose Gemma for its model family and external MTP behavior.
+Reserve `qwen36-35b` for tasks where the larger MoE model is worth slower,
+memory-sensitive operation.
 
-Multimodality is enabled by default for every profile. Disk slot persistence is
-intentionally not exposed because upstream llama.cpp rejects slot save/restore
-while a multimodal projector is loaded.
+The names describe files, not a promise of output quality. Benchmark the exact
+prompt lengths, images and tool calls used in production; rankings change by
+workload.
 
-## Adding a model
+## Multimodality and persistence
 
-Copy the closest config, choose a key and port, implement the three config
-functions, then run `./tests/test.sh`. After shutdown, Pi returns to the
-canonical `http://127.0.0.1:8081` endpoint instead of scanning inactive ports.
+Every profile loads a BF16 `mmproj` by default. The projectors are not optional
+in the intended operating mode. Upstream llama.cpp disables disk slot
+save/restore when a multimodal projector is loaded, so this repository omits
+that API instead of exposing a command that fails with HTTP 501.
+
+Prompt cache, context checkpoints and n-gram lookup caches are separate
+mechanisms. They may remain in memory or in the Qwen lookup file, but none is a
+resumable conversation snapshot. See [parameter decisions](parameters.md).
+
+## Adding a profile
+
+Copy the closest config and retain the contract used by `server/start.sh`:
+
+1. Define model identity, paths, alias, port and runtime defaults.
+2. Implement `pre_launch`, `build_extra_args` and `build_spec_args`.
+3. Emit one argument per line from the two builder functions. The launcher reads
+   them into Bash arrays, preserving quoting.
+4. Add a detailed profile document under `docs/model-profiles/`.
+5. Run lint, tests and a benchmark against the actual server before publishing.
+
+The launcher validates files and server health; it cannot prove that arbitrary
+GGUF weights and a projector are semantically compatible. That remains the
+profile author's responsibility.
