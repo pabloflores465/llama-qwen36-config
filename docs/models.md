@@ -19,9 +19,9 @@ and the canonical port `8081`. Paths are relative to `models/`.
 - Use Qwen 3.6 35B A3B for the strongest local reasoning profile, accepting
   slower CPU-MoE execution and tighter memory margins.
 
-Disable vision with `ENABLE_MMPROJ=0` when images are unnecessary or disk slot
-persistence is required. The slot save/restore API may return HTTP 501 while a
-multimodal projector is loaded.
+Multimodality is enabled by default for every profile. Disk slot persistence is
+intentionally not exposed because upstream llama.cpp rejects slot save/restore
+while a multimodal projector is loaded.
 
 ## Adding a model
 

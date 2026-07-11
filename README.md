@@ -2,7 +2,7 @@
 
 Config-driven local inference for Apple Silicon with 16 GB unified memory. The
 repository runs one `llama-server` at a time and integrates it with
-`pi-llama-cpp`, persistent slots and reproducible benchmarks.
+`pi-llama-cpp`, multimodal inference and reproducible benchmarks.
 
 ## Supported models
 
@@ -29,20 +29,6 @@ SPEC_MODE=none ./server/start.sh qwen35-9b
 
 Startup waits until `/health` succeeds. Failed starts roll back PID/state files
 and restore Pi's server discovery list. Only one healthy recorded server may run.
-
-## Slots
-
-```bash
-./server/slot.sh save coding-session.bin
-./server/slot.sh restore coding-session.bin
-./server/slot.sh list
-./server/slot.sh status
-./server/slot.sh erase
-```
-
-Slots persist the processed KV context, not a human-readable chat transcript.
-Some llama.cpp builds return HTTP 501 for disk slots while an mmproj is loaded;
-start with `ENABLE_MMPROJ=0` when slot persistence is required.
 
 ## Benchmarks
 
@@ -75,4 +61,4 @@ the portable template.
 - [Legacy `scripts/` compatibility and `process.cwd` recovery](scripts/README.md)
 
 Every setting that uses `${NAME:-default}` can be overridden for one command,
-for example `CTX_SIZE=32768 ENABLE_MMPROJ=0 ./server/start.sh qwen36-35b`.
+for example `CTX_SIZE=32768 ./server/start.sh qwen36-35b`.

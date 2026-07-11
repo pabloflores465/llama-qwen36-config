@@ -5,7 +5,6 @@ plus three small hooks; lifecycle policy remains in the shared server scripts.
 
 ```text
 config/<model>.conf -> server/start.sh -> llama-server HTTP API
-                              |                |-- slot.sh
                               |                `-- bench/bench.sh
                               |-- logs/<model>.log
                               |-- models/.run/server.state
@@ -43,6 +42,6 @@ listener merely because stale state mentions its port.
 
 ## State consumers
 
-`slot.sh` and `bench.sh` consume `server.state`. The benchmark additionally
-checks `/health` and verifies that `/v1/models` contains the recorded alias.
+`bench.sh` consumes `server.state`, checks `/health` and verifies that
+`/v1/models` contains the recorded alias.
 Runtime state and personal Pi settings are intentionally ignored by Git.

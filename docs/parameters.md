@@ -12,8 +12,8 @@ CTX_SIZE=32768 SPEC_MODE=none ./server/start.sh qwen35-9b
 - `MODEL_PATH`: main GGUF weights loaded by `llama-server`.
 - `MMPROJ_PATH`: vision projector translating image embeddings for the model.
 - `MTP_PATH`: separate draft/MTP model used by Gemma speculative decoding.
-- `ENABLE_MMPROJ`: loads vision support when `1`; disabling it saves memory and
-  enables slot persistence on builds that reject slots with multimodal models.
+- `ENABLE_MMPROJ`: loads vision support when `1`, which is the default for every
+  supported model. Disabling it is only a diagnostic escape hatch.
 - `ALIAS`: model identifier exposed through `/v1/models`; clients and benchmarks
   use it to verify that they reached the intended server.
 - `PORT_DEFAULT`: canonical listening port, `8081` for every model because this
@@ -32,7 +32,6 @@ CTX_SIZE=32768 SPEC_MODE=none ./server/start.sh qwen35-9b
 - `CACHE_REUSE`: token-distance threshold for prompt cache reuse. Zero leaves
   reuse decisions to exact cached prefixes and avoids aggressive reuse.
 - `CACHE_RAM`: MiB budget for the server's reusable prompt cache.
-- `SLOT_SAVE_PATH`: directory used by the HTTP slot save/restore facility.
 
 ## CPU, GPU and batching
 
