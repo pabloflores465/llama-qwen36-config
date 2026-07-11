@@ -12,6 +12,7 @@ logs/
 *.log
 *.pid
 llama-server.pid
+.pi/settings.json
 
 # macOS/editor noise
 .DS_Store
