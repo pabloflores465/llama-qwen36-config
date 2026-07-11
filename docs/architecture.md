@@ -30,7 +30,7 @@ Startup selects and sources the model before choosing `PORT_DEFAULT`. It removes
 stale metadata, validates assets, starts the process and waits for `/health`.
 Only then does it atomically publish `server.state` and focus Pi on that URL. A
 failed start terminates its child, removes runtime metadata and restores Pi's
-complete URL list.
+canonical `http://127.0.0.1:8081` endpoint.
 
 Foreground mode uses the same child, health check and state publication path as
 background mode. It then waits and forwards INT/TERM to the server.

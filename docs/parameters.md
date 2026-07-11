@@ -16,8 +16,8 @@ CTX_SIZE=32768 SPEC_MODE=none ./server/start.sh qwen35-9b
   enables slot persistence on builds that reject slots with multimodal models.
 - `ALIAS`: model identifier exposed through `/v1/models`; clients and benchmarks
   use it to verify that they reached the intended server.
-- `PORT_DEFAULT`: unique discovery port for the model. It can still be overridden
-  by the second positional argument or `PORT`.
+- `PORT_DEFAULT`: canonical listening port, `8081` for every model because this
+  repository runs only one server. Override it with the second argument or `PORT`.
 
 ## Context and concurrency
 

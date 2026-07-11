@@ -23,7 +23,7 @@ assert_eq test "$(state_value model "$tmp/state")" "state_value reads model"
 assert_eq "" "$(state_value missing "$tmp/state")" "missing state value is empty"
 
 urls="$(default_pi_urls "$ROOT_DIR/config")"
-assert_eq "http://127.0.0.1:8081;http://127.0.0.1:8082;http://127.0.0.1:8083;http://127.0.0.1:8084;http://127.0.0.1:8089" "$urls" "config ports build Pi URL list"
+assert_eq "http://127.0.0.1:8081" "$urls" "Pi defaults to canonical port 8081"
 
 printf '{"preserved": true}\n' >"$tmp/settings.json"
 set_pi_urls "$tmp/settings.json" "http://127.0.0.1:9999"

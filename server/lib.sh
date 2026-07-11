@@ -35,16 +35,10 @@ server_matches_state() {
 }
 
 default_pi_urls() {
-  local config_dir="$1" ports
-  # The literal text below matches the shell-default expression in configs.
-  # shellcheck disable=SC2016
-  ports="$(sed -n 's/^PORT_DEFAULT="${PORT_DEFAULT:-\([0-9][0-9]*\)}"$/\1/p' "$config_dir"/*.conf 2>/dev/null | sort -nu)"
-  local out="" port
-  while IFS= read -r port; do
-    [[ -n "$port" ]] || continue
-    out+="${out:+;}http://127.0.0.1:$port"
-  done <<<"$ports"
-  printf '%s\n' "$out"
+  # Pi watches only the canonical endpoint, avoiding warnings for inactive
+  # model-specific ports. The argument remains for caller compatibility.
+  : "${1:-}"
+  printf '%s\n' "${PI_DEFAULT_URL:-http://127.0.0.1:8081}"
 }
 
 set_pi_urls() {

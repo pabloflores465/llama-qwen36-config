@@ -1,14 +1,14 @@
 # Supported models
 
-All defaults target Apple Silicon with 16 GB unified memory and a single request
-slot. Paths are relative to the ignored `models/` directory.
+All defaults target Apple Silicon with 16 GB unified memory, one request slot
+and the canonical port `8081`. Paths are relative to `models/`.
 
 | Key | Default port | Quantization | Vision | Speculation | Notes |
 |---|---:|---|---|---|---|
-| `gemma4-12b` | 8082 | QAT Q4_0 | BF16 mmproj | external Q8 MTP | Dense 12B; MTP default |
-| `gemma4-e4b` | 8083 | QAT Q4_0 | BF16 mmproj | external Q8 MTP | Smaller Gemma variant |
-| `qwen35-4b` | 8084 | UD Q4_K_XL | BF16 mmproj | built-in MTP/ngram | Fastest Qwen profile |
-| `qwen35-9b` | 8089 | UD Q4_K_XL | BF16 mmproj | built-in MTP/ngram | Higher quality, more memory |
+| `gemma4-12b` | 8081 | QAT Q4_0 | BF16 mmproj | external Q8 MTP | Default model and canonical Pi endpoint |
+| `gemma4-e4b` | 8081 | QAT Q4_0 | BF16 mmproj | external Q8 MTP | Smaller Gemma variant |
+| `qwen35-4b` | 8081 | UD Q4_K_XL | BF16 mmproj | built-in MTP/ngram | Fastest Qwen profile |
+| `qwen35-9b` | 8081 | UD Q4_K_XL | BF16 mmproj | built-in MTP/ngram | Higher quality, more memory |
 | `qwen36-35b` | 8081 | UD IQ2_M | BF16 mmproj | built-in MTP | MoE; CPU experts; MTP off by default |
 
 ## Choosing a model
@@ -25,6 +25,6 @@ multimodal projector is loaded.
 
 ## Adding a model
 
-Copy the closest config, choose a unique key and default port, implement the
-three config functions, then run `./tests/test.sh`. `server/stop.sh` derives the
-Pi discovery URL list from all `PORT_DEFAULT` values automatically.
+Copy the closest config, choose a key and port, implement the three config
+functions, then run `./tests/test.sh`. After shutdown, Pi returns to the
+canonical `http://127.0.0.1:8081` endpoint instead of scanning inactive ports.

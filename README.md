@@ -9,10 +9,10 @@ repository runs one `llama-server` at a time and integrates it with
 | Key | Model | Port | Default speculation |
 |---|---|---:|---|
 | `qwen36-35b` | Qwen 3.6 35B A3B IQ2_M (MoE) | 8081 | none |
-| `gemma4-12b` | Gemma 4 12B QAT Q4_0 | 8082 | MTP |
-| `gemma4-e4b` | Gemma 4 E4B QAT Q4_0 | 8083 | MTP |
-| `qwen35-4b` | Qwen 3.5 4B Q4_K_XL | 8084 | MTP |
-| `qwen35-9b` | Qwen 3.5 9B Q4_K_XL | 8089 | MTP |
+| `gemma4-12b` | Gemma 4 12B QAT Q4_0 | 8081 | MTP |
+| `gemma4-e4b` | Gemma 4 E4B QAT Q4_0 | 8081 | MTP |
+| `qwen35-4b` | Qwen 3.5 4B Q4_K_XL | 8081 | MTP |
+| `qwen35-9b` | Qwen 3.5 9B Q4_K_XL | 8081 | MTP |
 
 All five profiles support vision through a BF16 multimodal projector. See
 [model guidance](docs/models.md) and the [parameter reference](docs/parameters.md).
@@ -20,8 +20,8 @@ All five profiles support vision through a BF16 multimodal projector. See
 ## Quick start
 
 ```bash
-./server/start.sh                       # interactive model; model-specific port
-./server/start.sh qwen35-4b             # http://127.0.0.1:8084
+./server/start.sh                       # defaults to Gemma 4 12B on port 8081
+./server/start.sh qwen35-4b             # http://127.0.0.1:8081
 ./server/start.sh gemma4-12b 9000       # explicit port
 SPEC_MODE=none ./server/start.sh qwen35-9b
 ./server/stop.sh
