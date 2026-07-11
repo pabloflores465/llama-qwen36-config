@@ -1,54 +1,65 @@
-# Local llama.cpp Qwen3.6 Config
+# Local llama.cpp server
 
-Stable local `llama-server` scripts for running Qwen3.6-35B-A3B-MTP GGUF on Apple Silicon with 16 GB unified memory.
+Config-driven local inference for Apple Silicon with 16 GB unified memory. The
+repository runs one `llama-server` at a time and integrates it with
+`pi-llama-cpp`, multimodal inference and reproducible benchmarks.
 
-## Scripts
+## Supported models
 
-```bash
-scripts/start-qwen36-llamacpp.sh
-scripts/stop-qwen36-llamacpp.sh
-```
+| Key | Model | Port | Default speculation |
+|---|---|---:|---|
+| `qwen36-35b` | Qwen 3.6 35B A3B IQ2_M (MoE) | 8081 | none |
+| `gemma4-12b` | Gemma 4 12B QAT Q4_0 | 8081 | MTP |
+| `gemma4-e4b` | Gemma 4 E4B QAT Q4_0 | 8081 | MTP |
+| `qwen35-4b` | Qwen 3.5 4B Q4_K_XL | 8081 | MTP |
+| `qwen35-9b` | Qwen 3.5 9B Q4_K_XL | 8081 | MTP |
 
-## Current default profile
+All five profiles support vision through a BF16 multimodal projector. See
+[model guidance](docs/models.md) and the [parameter reference](docs/parameters.md).
 
-On a 16 GB Mac, `PROFILE=auto` selects `fullctx16`:
-
-```bash
-CTX_SIZE=262144
-BATCH_SIZE=256
-UBATCH_SIZE=128
-N_GPU_LAYERS=0
-KV_OFFLOAD=0
-OP_OFFLOAD=1
-FLASH_ATTN=on
-CACHE_TYPE_K=q4_0
-CACHE_TYPE_V=q4_0
-ENABLE_MTP=0
-```
-
-## Start
+## Quick start
 
 ```bash
-cd scripts
-./start-qwen36-llamacpp.sh
+./server/start.sh                       # defaults to Gemma 4 12B on port 8081
+./server/start.sh qwen35-4b             # http://127.0.0.1:8081
+./server/start.sh gemma4-12b 9000       # explicit port
+SPEC_MODE=none ./server/start.sh qwen35-9b
+./server/stop.sh
 ```
 
-Server URL:
+Startup waits until `/health` succeeds. Failed starts roll back PID/state files
+and restore Pi's server discovery list. Only one healthy recorded server may run.
 
-```text
-http://127.0.0.1:8081
-```
-
-## Stop
+## Benchmarks
 
 ```bash
-cd scripts
-./stop-qwen36-llamacpp.sh
+./bench/bench.sh
+MATRIX='2048:128 16384:64' ./bench/bench.sh
+OUT=logs/experiment.jsonl ./bench/qwen35-bench.sh
 ```
 
-## Notes
+The family wrappers reject the wrong loaded model. JSONL results include the
+context, batch, cache, offload and speculation settings from `server.state`.
 
-- Model files are intentionally ignored by git.
-- Logs and PID files are ignored.
-- `q4_0/q4_0` KV cache requires `FLASH_ATTN=on` with this llama.cpp build.
-- MTP is disabled by default because it benchmarked slower on this CPU/RAM setup.
+## Validation
+
+```bash
+brew install shellcheck
+./tests/lint.sh
+./tests/test.sh
+```
+
+GitHub Actions runs both checks. Model files, logs, runtime state and personal
+`.pi/settings.json` data are not committed; use `.pi/settings.example.json` as
+the portable template.
+
+## Documentation
+
+- [Architecture and lifecycle](docs/architecture.md)
+- [Supported models and selection](docs/models.md)
+- [Hardware baseline and tuning](docs/hardware.md)
+- [Why each runtime parameter exists](docs/parameters.md)
+- [Legacy `scripts/` compatibility and `process.cwd` recovery](scripts/README.md)
+
+Every setting that uses `${NAME:-default}` can be overridden for one command,
+for example `CTX_SIZE=32768 ./server/start.sh qwen36-35b`.
