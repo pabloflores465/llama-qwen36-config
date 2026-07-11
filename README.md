@@ -57,6 +57,7 @@ the portable template.
 
 - [Architecture and lifecycle](docs/architecture.md)
 - [Supported models and selection](docs/models.md)
+- [Hardware baseline and tuning](docs/hardware.md)
 - [Why each runtime parameter exists](docs/parameters.md)
 - [Legacy `scripts/` compatibility and `process.cwd` recovery](scripts/README.md)
 
