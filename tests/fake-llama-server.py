@@ -3,6 +3,7 @@
 import json
 import signal
 import sys
+import configparser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 def argument(name, default):
@@ -12,13 +13,35 @@ def argument(name, default):
 host = argument("--host", "127.0.0.1")
 port = int(argument("--port", "18081"))
 alias = argument("--alias", "fake")
+preset = argument("--models-preset", "")
+models = {}
+if preset:
+    parser = configparser.ConfigParser()
+    with open(preset, encoding="utf-8") as stream:
+        raw = stream.read()
+    parser.read_string(raw)
+    models = {name: "unloaded" for name in parser.sections() if name != "*"}
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health": body = {"status": "ok"}
+        elif self.path == "/models": body = {"data": [{"id": key, "status": {"value": value}} for key, value in models.items()]}
         elif self.path == "/v1/models": body = {"data": [{"id": alias}]}
         else: self.send_error(404); return
         encoded = json.dumps(body).encode()
+        self.send_response(200); self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(encoded))); self.end_headers(); self.wfile.write(encoded)
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", "0"))
+        payload = json.loads(self.rfile.read(length) or b"{}")
+        model = payload.get("model")
+        if self.path == "/models/load" and model in models:
+            for key in models: models[key] = "unloaded"
+            models[model] = "loaded"
+        elif self.path == "/models/unload" and model in models:
+            models[model] = "unloaded"
+        else: self.send_error(404); return
+        encoded = b'{"success":true}'
         self.send_response(200); self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(encoded))); self.end_headers(); self.wfile.write(encoded)
     def log_message(self, _format, *_args): pass

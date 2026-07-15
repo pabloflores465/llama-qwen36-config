@@ -21,4 +21,17 @@ state="$tmp/repo/models/.run/server.state"
 curl -fsS http://127.0.0.1:18084/health >/dev/null
 PATH="$tmp/bin:$PATH" "$tmp/repo/server/stop.sh" >/dev/null
 [[ ! -e "$state" && ! -e "$tmp/repo/models/.run/server.pid" ]]
+
+PATH="$tmp/bin:$PATH" MODEL_PATH="$tmp/model.gguf" ENABLE_MMPROJ=0 SPEC_MODE=none \
+  HEALTH_TIMEOUT=5 MIN_FREE_PCT=0 SEARXNG_MCP_ENABLED=0 \
+  "$tmp/repo/server/router.sh" 18084 >/dev/null
+[[ "$(sed -n 's/^mode=//p' "$state")" == router ]]
+PATH="$tmp/bin:$PATH" MODEL_PATH="$tmp/model.gguf" ENABLE_MMPROJ=0 SPEC_MODE=none \
+  PI_GLOBAL_SETTINGS="$tmp/global-settings.json" "$tmp/repo/server/model_swap.sh" gemma4-e4b >/dev/null
+[[ "$(sed -n 's/^model=//p' "$state")" == gemma4-e4b ]]
+[[ "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["defaultModel"])' "$tmp/global-settings.json")" == gemma4-e4b ]]
+PATH="$tmp/bin:$PATH" MODEL_PATH="$tmp/model.gguf" ENABLE_MMPROJ=0 SPEC_MODE=none \
+  PI_GLOBAL_SETTINGS="$tmp/global-settings.json" "$tmp/repo/server/model_swap.sh" qwen35-4b >/dev/null
+[[ "$(sed -n 's/^model=//p' "$state")" == qwen35-4b ]]
+PATH="$tmp/bin:$PATH" "$tmp/repo/server/stop.sh" >/dev/null
 echo "Integration lifecycle passed."

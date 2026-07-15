@@ -30,18 +30,64 @@ API_MODELS="$(curl -fsS "$URL/v1/models")"
 python3 - "$API_MODELS" "$ALIAS" <<'PY'
 import json, sys
 models, expected = json.loads(sys.argv[1]), sys.argv[2]
-ids = [str(x.get("id", "")) for x in models.get("data", [])]
+ids = []
+for item in models.get("data", []):
+    ids.append(str(item.get("id", "")))
+    ids.extend(str(alias) for alias in item.get("aliases", []))
 if expected not in ids:
-    raise SystemExit(f"Running API models {ids!r} do not contain recorded alias {expected!r}")
+    raise SystemExit(f"Running API models/aliases {ids!r} do not contain recorded alias {expected!r}")
 PY
 
 OUT="${OUT:-$ROOT_DIR/logs/${MODEL}-bench.jsonl}"
 MATRIX="${MATRIX:-2048:128 16384:64 65536:32}"
 mkdir -p "$(dirname "$OUT")"
 
+write_memory_pressure() {
+  local phase="$1" prompt="$2" pressure stats
+  command -v memory_pressure >/dev/null 2>&1 || return 0
+  command -v vm_stat >/dev/null 2>&1 || return 0
+  pressure="$(memory_pressure 2>/dev/null || true)"
+  stats="$(vm_stat 2>/dev/null || true)"
+  [[ -n "$pressure" && -n "$stats" ]] || return 0
+  python3 - "$phase" "$prompt" "$pressure" "$stats" >>"$OUT" <<'PY'
+import json, re, sys, time
+phase, prompt, pressure, stats = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
+
+def number(pattern, text):
+    match = re.search(pattern, text, re.MULTILINE)
+    return int(match.group(1)) if match else None
+
+page_size = number(r"page size of (\d+) bytes", stats)
+row = {
+    "type": "memory_pressure",
+    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "phase": phase,
+    "target_prompt": prompt,
+    "free_pct": number(r"System-wide memory free percentage:\s*(\d+)%", pressure),
+    "page_size": page_size,
+}
+for key, label in {
+    "pages_free": "Pages free",
+    "pages_active": "Pages active",
+    "pages_inactive": "Pages inactive",
+    "pages_wired": "Pages wired down",
+    "pages_compressor": "Pages occupied by compressor",
+    "compressions": "Compressions",
+    "decompressions": "Decompressions",
+    "pageins": "Pageins",
+    "pageouts": "Pageouts",
+    "swapins": "Swapins",
+    "swapouts": "Swapouts",
+}.items():
+    row[key] = number(rf"^{re.escape(label)}:\s*(\d+)\.?$", stats)
+print(json.dumps(row, separators=(",", ":")), flush=True)
+PY
+}
+
 for item in $MATRIX; do
   [[ "$item" =~ ^[0-9]+:[0-9]+$ ]] || { echo "Invalid MATRIX item: $item" >&2; exit 2; }
   target="${item%:*}"; gen="${item#*:}"
+  write_memory_pressure before "$target"
   python3 - "$URL" "$STATE_FILE" "$target" "$gen" >>"$OUT" <<'PY'
 import json, platform, sys, time, urllib.request
 url, state_path, target, gen = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
@@ -51,6 +97,7 @@ with open(state_path, encoding="utf-8") as f:
         key, sep, value = line.rstrip("\n").partition("=")
         if sep: state[key] = value
 def post(path, obj):
+    obj.setdefault("model", state.get("model"))
     req = urllib.request.Request(url + path, json.dumps(obj).encode(), {"Content-Type":"application/json"})
     with urllib.request.urlopen(req, timeout=3600) as response:
         return json.loads(response.read())
@@ -81,5 +128,6 @@ PY
   pid="$(state_value pid "$STATE_FILE")"
   ps -o pid=,rss=,vsz=,%cpu= -p "$pid" 2>/dev/null |
     awk -v m="$MODEL" -v p="$target" '{printf "{\"type\":\"memory\",\"model\":\"%s\",\"after_prompt\":%s,\"pid\":%s,\"rss_kib\":%s,\"vsz_kib\":%s,\"cpu_pct\":%s}\n",m,p,$1,$2,$3,$4}' >>"$OUT" || true
+  write_memory_pressure after "$target"
 done
 echo "Wrote $OUT"

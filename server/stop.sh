@@ -8,12 +8,19 @@ CONFIG_DIR="$ROOT_DIR/config"
 PI_SETTINGS="$ROOT_DIR/.pi/settings.json"
 PID_FILE="$RUN_DIR/server.pid"
 STATE_FILE="$RUN_DIR/server.state"
+MCP_PID_FILE="$RUN_DIR/searxng-mcp.pid"
 # shellcheck source=server/lib.sh
 source "$SCRIPT_DIR/lib.sh"
 
 PID="$(state_value pid "$STATE_FILE")"
 PORT="$(state_value port "$STATE_FILE")"
+MCP_PID="$(state_value mcp_pid "$STATE_FILE")"
+if [[ -z "$MCP_PID" && -f "$MCP_PID_FILE" ]]; then
+  MCP_PID="$(head -1 "$MCP_PID_FILE")"
+fi
 STOPPED=0
+STOP_ATTEMPTS=30
+[[ "$(state_value mode "$STATE_FILE")" == router ]] && STOP_ATTEMPTS=150
 
 if [[ -n "$PID" ]] && is_llama_server_pid "$PID"; then
   if [[ -n "$PORT" ]] && ! pid_listens_on_port "$PID" "$PORT"; then
@@ -22,7 +29,7 @@ if [[ -n "$PID" ]] && is_llama_server_pid "$PID"; then
   fi
   echo "Stopping llama-server PID $PID ..."
   kill "$PID"
-  for _ in {1..30}; do
+  for (( attempt = 0; attempt < STOP_ATTEMPTS; attempt++ )); do
     valid_pid "$PID" || { STOPPED=1; break; }
     sleep 0.2
   done
@@ -38,3 +45,12 @@ fi
 rm -f "$PID_FILE" "$STATE_FILE"
 set_pi_urls "$PI_SETTINGS" "$(default_pi_urls "$CONFIG_DIR")"
 [[ "$STOPPED" == 1 ]] && echo "llama-server stopped." || echo "Stale state cleaned; no running llama-server found."
+
+if [[ "$MCP_PID" =~ ^[0-9]+$ ]] && valid_pid "$MCP_PID"; then
+  MCP_COMMAND="$(ps -p "$MCP_PID" -o command= 2>/dev/null || true)"
+  if [[ "$MCP_COMMAND" == *searxng-mcp.mjs* ]]; then
+    echo "Stopping SearXNG MCP bridge PID $MCP_PID ..."
+    kill "$MCP_PID" 2>/dev/null || true
+  fi
+fi
+rm -f "$MCP_PID_FILE"

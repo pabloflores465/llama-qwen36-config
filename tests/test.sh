@@ -34,6 +34,9 @@ assert d == {"preserved": True, "llamaServerUrl": "http://127.0.0.1:9999"}
 PY
 echo "ok: Pi settings update is valid and preserves other keys"
 
+set_pi_model "$tmp/settings.json" "qwen35-4b"
+assert_eq "qwen35-4b" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["defaultModel"])' "$tmp/settings.json")" "Pi model update selects active router model"
+
 for config in "$ROOT_DIR"/config/*.conf; do
   # shellcheck source=/dev/null
   MODELS_DIR="$ROOT_DIR/models" source "$config"

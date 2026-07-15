@@ -12,6 +12,7 @@ uses one allowed value instead of another.
 | Qwen 3.5 4B MTP | [`config/qwen35-4b.conf`](../../config/qwen35-4b.conf) | [Qwen 3.5 4B](qwen35-4b.md) |
 | Qwen 3.5 9B MTP | [`config/qwen35-9b.conf`](../../config/qwen35-9b.conf) | [Qwen 3.5 9B](qwen35-9b.md) |
 | Qwen 3.6 35B A3B MTP | [`config/qwen36-35b.conf`](../../config/qwen36-35b.conf) | [Qwen 3.6 35B](qwen36-35b.md) |
+| Qwen 3.6 35B full GPU experiment | [`config/qwen36-35b-gpu-full.conf`](../../config/qwen36-35b-gpu-full.conf) | [Qwen 3.6 35B full GPU](qwen36-35b-gpu-full.md) |
 
 All paths are defaults, not downloaded assets. The launcher fails early with a
 clear path error if a required GGUF is absent.

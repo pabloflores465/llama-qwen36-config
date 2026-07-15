@@ -5,6 +5,10 @@ This repository is an operational baseline for running one multimodal
 profiles, process lifecycle, Pi integration, reproducible benchmarks and safety
 checks so changing models does not require a separate launcher for every GGUF.
 
+For hot swaps on one stable endpoint, start `./server/router.sh` once and use
+`./server/model_swap.sh <model-key>`. The router remains alive while its model
+worker is unloaded and replaced.
+
 The checked-in defaults were tuned for the MacBook Pro M5 with 16 GB unified
 memory used to build this repository. They are a conservative starting point,
 not universal performance claims. Read [hardware tuning](docs/hardware.md)
@@ -47,11 +51,12 @@ ShellCheck, available through `brew install shellcheck`.
 
 | Key | Weights | Default role | Speculation | Detail |
 |---|---|---|---|---|
-| `gemma4-12b` | Gemma 4 12B QAT Q4_0 | Default balanced Gemma | External Q8 MTP | [profile](docs/model-profiles/gemma4-12b.md) |
+| `gemma4-12b` | Gemma 4 12B Q4_K_M | Default balanced Gemma | External Q8 MTP | [profile](docs/model-profiles/gemma4-12b.md) |
 | `gemma4-e4b` | Gemma 4 E4B QAT Q4_0 | Lighter Gemma option | External Q8 MTP | [profile](docs/model-profiles/gemma4-e4b.md) |
 | `qwen35-4b` | Qwen 3.5 4B UD Q4_K_XL | Lowest-latency Qwen | MTP; n-gram optional | [profile](docs/model-profiles/qwen35-4b.md) |
 | `qwen35-9b` | Qwen 3.5 9B UD Q4_K_XL | Higher-quality Qwen | MTP; n-gram optional | [profile](docs/model-profiles/qwen35-9b.md) |
 | `qwen36-35b` | Qwen 3.6 35B A3B UD IQ2_M | Largest local MoE | Off by default | [profile](docs/model-profiles/qwen36-35b.md) |
+| `qwen36-35b-gpu-full` | Qwen 3.6 35B A3B UD IQ2_M | Experimental full Metal, CPU KV | Disabled | [profile](docs/model-profiles/qwen36-35b-gpu-full.md) |
 
 Each profile uses port `8081` by default because this is a single-server
 workflow. Pass a second argument to use another port for an experiment.
@@ -143,7 +148,8 @@ OUT=logs/qwen35-9b-experiment.jsonl ./bench/qwen35-bench.sh
 The generic runner validates state, `/health` and the model alias from
 `/v1/models`. Family wrappers also reject the wrong model family. Each matrix
 item is `prompt_tokens:generation_tokens`; output is JSONL plus a process-memory
-row after each request.
+row after each request. On macOS, system `memory_pressure` snapshots bracket
+each request and record wired/compressed pages, page I/O and swap counters.
 
 The runner sends `cache_prompt=false`, so prompt throughput does not accidentally
 measure a warm cache. It compares cold prefill configurations, not cached-chat

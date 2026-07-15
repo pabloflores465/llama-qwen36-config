@@ -1,0 +1,3 @@
+{
+  "mcpServers": "[{\"id\":\"local-searxng\",\"name\":\"Local SearXNG Web Search\",\"description\":\"Private web search through the local SearXNG instance.\",\"url\":\"http://127.0.0.1:8765/mcp\",\"enabled\":true,\"requestTimeoutSeconds\":45}]"
+}
