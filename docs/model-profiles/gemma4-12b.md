@@ -1,21 +1,22 @@
-# Gemma 4 12B QAT
+# Gemma 4 12B Q4_K_M
 
 Config: [`config/gemma4-12b.conf`](../../config/gemma4-12b.conf)
 
-`gemma4-12b` is the repository default. It pairs QAT Q4_0 main weights with a
-BF16 multimodal projector and a separate Q8 MTP assistant. It is the balanced
-Gemma profile when you want vision, a long context ceiling and external
-speculative decoding without moving to the much larger Qwen 3.6 MoE profile.
+`gemma4-12b` is the repository default. It pairs Unsloth's non-QAT Q4_K_M main
+weights with the repository's BF16 multimodal projector and root-level Q8_0 MTP
+assistant. It is the balanced Gemma profile when you want vision, a long
+context ceiling and external speculative decoding without moving to the much
+larger Qwen 3.6 MoE profile.
 
 ## Assets and identity
 
 | Setting | Default | Decision |
 |---|---|---|
-| `MODEL_PATH` | `gemma-4-12B-it-QAT-Q4_0.gguf` | QAT Q4_0 is the memory-quality compromise chosen for 16 GB unified memory. |
-| `MMPROJ_PATH` | `mmproj-gemma-4-12B-it-QAT-BF16.gguf` | BF16 projector preserves the vision encoder representation. |
+| `MODEL_PATH` | `gemma-4-12b-it-Q4_K_M.gguf` | Standard Q4_K_M is the requested non-QAT 4-bit test variant. |
+| `MMPROJ_PATH` | `mmproj-BF16.gguf` | Matching BF16 projector from the same Unsloth repository preserves the vision encoder representation. |
 | `MTP_PATH` | `mtp-gemma-4-12b-it.gguf` | Gemma uses a separate assistant file for MTP; startup fails if MTP is requested and it is absent. |
 | `ENABLE_MMPROJ` | `1` | Vision is the intended mode. Disabling it is diagnostic only, not the documented workflow. |
-| `ALIAS` | `gemma-4-12b-qat` | This exact ID must appear in `/v1/models`; benchmarks use it to prevent measuring the wrong server. |
+| `ALIAS` | `gemma-4-12b` | This exact ID must appear in `/v1/models`; benchmarks use it to prevent measuring the wrong server. |
 | `PORT_DEFAULT` | `8081` | One server runs at a time, so all profiles share Pi's canonical endpoint. |
 
 ## Context, CPU and memory profile
@@ -50,9 +51,11 @@ mechanism for this profile.
 ## Speculative decoding
 
 `SPEC_MODE=mtp` is the default. The main model verifies proposals from the Q8
-assistant. `DRAFT_N_MIN=1` and `DRAFT_N_MAX=1` are intentionally conservative:
-they reduce extra draft work and memory on this constrained device. The draft is
-fully offloaded with `--spec-draft-ngl -1`; its draft KV remains q8_0.
+assistant. `DRAFT_N_MIN=1` and `DRAFT_N_MAX=3` balance proposal acceptance and
+verification work on the target M5: the measured 2,048-prompt/128-generation
+benchmark improved decode throughput by about 24% over a maximum draft length
+of one. The draft is fully offloaded with `--spec-draft-ngl -1`; its draft KV
+remains q8_0.
 
 Available modes:
 
@@ -67,7 +70,8 @@ mode. Benchmark it rather than assuming it is faster for natural language.
 
 ## Model-specific server flags
 
-- `--jinja` uses the model chat template.
+- `--jinja` uses the chat template embedded in the model; there is no external
+  tool-calling template override.
 - `--cont-batching` lets the server schedule prompts efficiently.
 - `--cache-prompt` and `--cache-idle-slots` preserve in-memory request cache
   behavior; they are not disk persistence.

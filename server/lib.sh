@@ -67,3 +67,30 @@ except BaseException:
     raise
 PY
 }
+
+set_pi_model() {
+  local settings="$1" model="$2"
+  mkdir -p "$(dirname "$settings")"
+  [[ -f "$settings" ]] || printf '{}\n' >"$settings"
+  python3 - "$settings" "$model" <<'PY'
+import json, os, sys, tempfile
+path, model = sys.argv[1], sys.argv[2]
+try:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+except (OSError, ValueError):
+    data = {}
+data["defaultModel"] = model
+directory = os.path.dirname(path)
+fd, tmp = tempfile.mkstemp(prefix="settings.", suffix=".tmp", dir=directory, text=True)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    os.replace(tmp, path)
+except BaseException:
+    try: os.unlink(tmp)
+    except OSError: pass
+    raise
+PY
+}

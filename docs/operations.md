@@ -32,9 +32,39 @@ Usage:
 ```
 
 The script reads `models/.run/server.state`, validates that the PID is alive,
-looks like `llama-server`, and owns the recorded port. It sends TERM, waits six
-seconds, then uses KILL only for that verified process. If metadata is stale it
+looks like `llama-server`, and owns the recorded port. It sends TERM, allowing
+six seconds for a single-model server or 30 seconds for a router to stop its
+workers, then uses KILL only for that verified process. If metadata is stale it
 removes it without killing a process it cannot identify.
+
+## `server/router.sh` and `server/model_swap.sh`
+
+Run `./server/router.sh [port]` once to keep a router listening on the canonical
+endpoint. It generates `models/.run/router-models.ini` from the available
+`config/*.conf` profiles and limits the router to one loaded model.
+
+```bash
+./server/model_swap.sh gemma4-e4b
+./server/model_swap.sh qwen35-4b
+```
+
+The swap command unloads the current worker, loads the target through the
+router API, and updates `server.state`. Editing a profile requires one router
+restart to regenerate the preset file.
+
+The router also starts `server/searxng-mcp.mjs` on `127.0.0.1:8765` and applies
+`config/webui.json`, exposing the local SearXNG service at `127.0.0.1:8080` as a
+`web_search` MCP tool in the built-in Web UI. The bridge listens only on
+loopback, allows browser requests from the local Web UI, and is stopped by
+`server/stop.sh`. Set `SEARXNG_MCP_ENABLED=0` to launch the router without it;
+`SEARXNG_URL`, `SEARXNG_MCP_HOST`, and `SEARXNG_MCP_PORT` override its endpoints.
+
+The router enables llama.cpp's `read_file`, `file_glob_search`, `grep_search`,
+`exec_shell_command`, `write_file`, `edit_file`, and `apply_diff` built-in tools
+for the Web UI. They run with the router process's user permissions and working
+directory, so the router must remain bound to loopback. Set
+`WEBUI_BUILTIN_TOOLS=` to disable them or provide a narrower comma-separated
+allowlist for one launch. Do not expose this configuration to a network.
 
 ## `server/lib.sh`
 
@@ -56,7 +86,10 @@ MATRIX='2048:128 16384:64' OUT=logs/run.jsonl ./bench/bench.sh
 It verifies a healthy state and alias, calibrates text to the selected model's
 tokenizer through `/tokenize`, sends `/completion`, and appends JSONL records.
 The default matrix is `2048:128 16384:64 65536:32`. The generic runner does not
-assume a family; it measures whatever the state records.
+assume a family; it measures whatever the state records. On macOS it also emits
+`memory_pressure` rows before and after every request. These include the free
+percentage, page size, wired/compressor pages, pageins/pageouts and swap
+counters, so pressure deltas can be compared without conflating them with RSS.
 
 `bench/qwen35-bench.sh`, `bench/gemma4-bench.sh`, and
 `bench/bench-gemma4-12b.sh` are deliberately small wrappers. They set an

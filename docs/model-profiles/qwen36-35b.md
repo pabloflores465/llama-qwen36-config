@@ -23,6 +23,12 @@ The profile uses q4_0 KV, Flash Attention, one parallel request, 512 MiB prompt 
 
 `MEMORY_GUARD=1` reads `memory_pressure` and refuses startup below 20% free memory. It protects the desktop but cannot predict every allocation. If the server dies after load, lower context or microbatch before disabling the guard.
 
+More aggressive Metal/CPU-MoE splits were measured on this 16 GB M5 and did
+not improve the profile: two or more GPU layers caused severe wired-memory
+growth and slower inference, while full or tensor-level attention offload ran
+out of Metal memory. The controlled results are recorded in
+[`../benchmarks/qwen36-metal-cpu-moe-2026-07-13.md`](../benchmarks/qwen36-metal-cpu-moe-2026-07-13.md).
+
 Eight context checkpoints at 16,384-token intervals can help long sessions but cost memory. MTP is disabled by default because draft work may not repay its cost on this CPU-heavy MoE profile.
 
 ```bash
